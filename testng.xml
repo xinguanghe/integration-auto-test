@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="All Test Suite" verbose="10" parallel="tests" thread-count="1">
+    <!-- 测试目标API服务器Host -->
+    <parameter name="APIHost" value="http://wyscrm-uat.sunac.com.cn" />
+
+    <!-- Web 测试 Client 配置 -->
+    <!--parameter name="WebClient" value="./clients/WebClients.properties" /-->
+    <parameter name="WebClient" value="" />
+
+    <!-- Android 测试 Client 配置 -->
+    <parameter name="AndroidClient" value="./clients/AndroidClients.properties" />
+
+    <!-- iOS 测试 Client 配置 -->
+<!--    <parameter name="iOSClient" value="./clients/iOSClients.properties" />-->
+    <parameter name="iOSClient" value="" />
+
+    <!-- 测试用例Excel文件在本地的位置和文件名 -->
+<!--    <parameter name="Excel" value="./Integration-Auto-TestCase.xls" />-->
+    <!-- 测试用例Excel文件支持WPS云文档URL（文档权限设置为任何人可查看） -->
+    <parameter name="Excel" value="https://kdocs.cn/l/cfkRwRHRrT64" />
+    <!-- jenkins服务的 WorkSpace 目录路径,可以不填写 -->
+    <parameter name="JenkinsWS" value="http://172.17.32.117:8080/job/android-auto-test/ws" />
+<!--    <parameter name="JenkinsWS" value="" />-->
+
+    <test name="归心Android" preserve-order="true">
+        <!-- 测试用例Excel里的Sheet名 -->
+        <parameter name="sheet" value="归心Android" />
+        <!-- 执行测试用例类型，执行多个类型时可以用 "," 号分隔开 -->
+        <parameter name="runType" value="#,0,1,2,3,4" />
+        <classes>
+            <!-- 固定这一个类，不能变更 -->
+            <class name="test.BasicTest"/>
+        </classes>
+    </test>
+</suite>
