@@ -6,10 +6,15 @@ import io.appium.java_client.android.Activity;
 import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.touch.offset.PointOption;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.openqa.selenium.*;
+import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.Assert;
 import org.testng.Reporter;
@@ -17,6 +22,9 @@ import org.testng.annotations.*;
 import org.testng.reporters.Files;
 
 import java.io.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -24,9 +32,9 @@ import java.util.*;
 public class BasicTest {//声明驱动对象
     public static  CloseableHttpClient apiClient = null;
     public static  WebDriver webDriver=null;
-    public static  RemoteWebDriver driver=null;
     public static  AndroidDriver androidDriver = null;
     public static  IOSDriver iOSDriver = null;
+    public static  Connection connection = null;
     public static  JavascriptExecutor jse = null;
     public static  TouchAction action = null;
     public static  HashMap paramMap = new HashMap();
@@ -44,16 +52,36 @@ public class BasicTest {//声明驱动对象
     public static  String device = "";
     public static  String app = "";
     public static  String tcID = "";
+    public static  String down="";
+    public static  String result="";
 
     @BeforeSuite()
-    @Parameters(value = { "APIHost","WebClient","AndroidClient","iOSClient","Excel","JenkinsWS" })
-    public void setUp(String apiHost,String webClient,String androidClient,String iOSClient,String excel,String jenkinsWS) throws Exception {
+    @Parameters(value = { "APIHost","WebClient","AndroidClient","iOSClient","DatabaseClient","Excel","Pass","Down","JenkinsWS","WebHost","sheet","runType" })
+    public void setUp(String apiHost,String webClient,String androidClient,String iOSClient,String databaseClient,String excel,String pass,String down,String jenkinsWS,String webHost,String sheet,String runType) throws Exception {
+        System.out.println("BeforeSuite setUp========>");
+        this.webHost = webHost.trim();
+        this.sheet = sheet.trim();
+        this.runType = runType.trim();
+        System.out.println("setUp========>sheet: "+sheet);
+        System.out.println("setUp========>runType: "+runType);
+
         Properties prop = new Properties();
         this.apiHost = apiHost.trim();
         this.excel = excel.trim();
+        this.down = down.trim();
         this.jenkinsWS = jenkinsWS.trim();
         apiClient = Common.buildSSLCloseableHttpClient();
 
+        if(databaseClient!=null && databaseClient.trim().length()>0){
+            // 通过输入缓冲流进行读取配置文件 加载输入流
+            prop.load(new BufferedInputStream(new FileInputStream(new File(databaseClient))));
+
+            int index = 1;
+            while (prop.getProperty("Connection"+index) != null && prop.getProperty("Connection"+index).trim().length() > 0) {
+                Common.setDBConnection(prop.getProperty("Connection"+index).trim());
+                index += 1;
+            }
+        }
         if(webClient!=null && webClient.trim().length()>0){
             // 通过输入缓冲流进行读取配置文件 加载输入流
             prop.load(new BufferedInputStream(new FileInputStream(new File(webClient))));
@@ -89,23 +117,34 @@ public class BasicTest {//声明驱动对象
 
         //下载WPS云文档测试用例
         if(excel.indexOf("http")==0){
-            String url = "GET:https://www.kdocs.cn/api/office/file";
-            url = url + excel.substring(excel.lastIndexOf('/')) + "/download";
-            String result = APIExecute.execute(url,"","");
-            Common.logPrinter("setUp========>test case result1: " + result);
-            int index = result.indexOf("\"download_url\":\"")+16;
-            url = "GET:" + result.substring(index,result.indexOf("\"",index));
-            url = url.replaceAll("\\\\u0026","&");
-            result = APIExecute.execute(url,"","{\"Save\":\"./Integration-Auto-TestCase.xls\"}");
-            Common.logPrinter("setUp========>test case result2: " + result);
-            this.excel = "./Integration-Auto-TestCase.xls";
+            webDriver = (WebDriver) clientMap.get("Web");
+            webDriver.get(excel);
+            Thread.sleep(5000);
+            this.excel = down;
+            operation("{\"Type\":\"Set\",\"Local\":\"Class:password-input\",\"Value\":\""+pass+"\",\"Index\":\"0\"};","Web");
+            operation("{\"Type\":\"Click\",\"Local\":\"XPath://button[text()='确定']\",\"Index\":\"0\",\"Sleep\":\"60\"};","Web");
+            operation("{\"Type\":\"Click\",\"Local\":\"XPath://button[text()='下载']\",\"Index\":\"0\",\"Sleep\":\"60\"};","Web");
+            //xpathMap = DataRead.getXPath(this.excel);
+            //assertResult("{\"AssertType\":\"File\",\"Value\":\""+down+"\",\"Mold\":\"Include\",\"Delete\":\"Yes\"};","Web");
+//            String url = "GET:https://wwww.kdocs.cn/api/office/file";
+//            url = url + excel.substring(excel.lastIndexOf('/')) + "/download";
+//            String result = APIExecute.execute(url,"","");
+//            Common.logPrinter("setUp========>test case result1: " + result);
+//            int index = result.indexOf("\"download_url\":\"")+16;
+//            url = "GET:" + result.substring(index,result.indexOf("\"",index));
+//            url = url.replaceAll("\\\\u0026","&");
+//            result = APIExecute.execute(url,"","{\"Save\":\"./Integration-Auto-TestCase.xls\"}");
+//            Common.logPrinter("setUp========>test case result2: " + result);
+//            this.excel = "./Integration-Auto-TestCase.xls";
         }
         xpathMap = DataRead.getXPath(this.excel);
+        //datas = DataRead.getDataProvider(this.excel,this.sheet,this.runType);
     }
 
     @BeforeTest()
     @Parameters(value = { "WebHost","sheet","runType"})
     public void setUp(String webHost,String sheet,String runType){
+        System.out.println("BeforeTest setUp========>");
         this.webHost = webHost.trim();
         this.sheet = sheet.trim();
         this.runType = runType.trim();
@@ -117,6 +156,7 @@ public class BasicTest {//声明驱动对象
     public Object[][] createTestData(){
         Common.logPrinter("createTestData========>excel: " + excel);
         Common.logPrinter("createTestData========>sheet: " + sheet);
+        //return datas;
         return DataRead.getDataProvider(excel,sheet,runType);
     }
 
@@ -126,7 +166,7 @@ public class BasicTest {//声明驱动对象
         this.tcID = tcID.substring(tcID.indexOf("|", 1) + 1, tcID.indexOf(" | "));
         Common.logPrinter("runTest========> client: " + client);
         Common.logPrinter("runTest========>Operates: \n" + operates );
-        if(url.length()>1) url = (String) xpathMap.get(url);
+        if(url.length()>1 && url.indexOf("/")<0) url = (String) xpathMap.get(url);
         url = paramReplace(url);
         Common.logPrinter("runTest========>URL: " + url );
 
@@ -138,31 +178,100 @@ public class BasicTest {//声明驱动对象
             String[] params = parametric.split(";" );
             int index = 0;
             for (int i = 0; i < params.length; i++) {
-                if (params[i].trim().length() > 0) {
+                if (params[i].trim().length() > 0 && params[i].trim().indexOf("{") == 0) {
                     params[i] = paramReplace(params[i]);
                     Common.logPrinter("runTest========>param: " + params[i]);
                     index = APIExecute.parametric(httpResult,params[i].trim(),index);
+                }else if(params[i].trim().length() > 0){
+                    Common.logPrinter("runTest========>跳过参数化操作: " + params[i]);
                 }
             }
 
             Common.logPrinter("runTest========>Asserts: \n"+asserts );
             String[] ass = asserts.split(";" );
             for (int i = 0; i < ass.length; i++) {
-                if (ass[i].trim().length() > 0) {
+                if (ass[i].trim().length() > 0 && ass[i].trim().indexOf("{") == 0) {
                     ass[i] = paramReplace(ass[i]);
                     Common.logPrinter("runTest========>assert: " + ass[i]);
                     APIExecute.assertResult(httpResult,ass[i].trim());
+                }else if(ass[i].trim().length() > 0){
+                    Common.logPrinter("runTest========>跳过断言: " + ass[i]);
                 }
             }
-        }else if(client.contains("Web")){
+        }else if(client.indexOf("DB")==0){
+            connection = (Connection) clientMap.get(client);
+            operates = paramReplace(operates);
+            String result = "";
+            if(operates.indexOf("Select:")==0) {
+                operates = operates.substring(7).trim();
+                Common.logPrinter("runTest========>SQL: \n"+operates );
+                ResultSet rs = connection.prepareStatement(operates).executeQuery();
+                ResultSetMetaData rsmd = rs.getMetaData();
+                int col = rsmd.getColumnCount();
+                if (col > 100) col = 100;
+                int row = 1;
+                for (int i = 1; i <= col; i++) {
+                    if (i == col) {
+                        result = result + " | " + rsmd.getColumnName(i) + " |\n";
+                    } else {
+                        result = result + " | " + rsmd.getColumnName(i);
+                    }
+                }
+                while(rs.next()){
+                    result = result + "||" + (row++) + "|| ";
+                    for (int i = 1; i <= col; i++) {
+                        String value = rs.getString(i);
+                        if (i == col) {
+                            result = result + value + " |\n";
+                        } else {
+                            result = result + value + " | ";
+                        }
+                    }
+                }
+                Common.logPrinter("runTest========>ResultSet Data: \n" + result);
+            }else {
+                operates = operates.substring(7).trim();
+                Common.logPrinter("runTest========>SQL: \n" + operates );
+                int count = connection.prepareStatement(operates).executeUpdate();
+                Common.logPrinter("runTest========>SQL 所影响的记录行数: " + count );
+                Assert.assertTrue(count>=0);
+                //Common.logPrinter("runTest========>ResultSet: \n"+result.toString() );
+            }
+
+            Common.logPrinter("runTest========>Parametric: \n" + parametric );
+            String[] params = parametric.split(";" );
+            int index = 0;
+            for (int i = 0; i < params.length; i++) {
+                if (params[i].trim().length() > 0 && params[i].trim().indexOf("{") == 0) {
+                    params[i] = paramReplace(params[i]);
+                    Common.logPrinter("runTest========>param: " + params[i]);
+                    index = APIExecute.parametric(result,params[i].trim(),index);
+                }else if(params[i].trim().length() > 0){
+                    Common.logPrinter("runTest========>跳过参数化操作: " + params[i]);
+                }
+            }
+
+            Common.logPrinter("runTest========>Asserts: \n"+asserts );
+            String[] ass = asserts.split(";" );
+            for (int i = 0; i < ass.length; i++) {
+                if (ass[i].trim().length() > 0 && ass[i].trim().indexOf("{") == 0) {
+                    ass[i] = paramReplace(ass[i]);
+                    Common.logPrinter("runTest========>assert: " + ass[i]);
+                    APIExecute.assertResult(result,ass[i].trim());
+                }else if(ass[i].trim().length() > 0){
+                    Common.logPrinter("runTest========>跳过断言: " + ass[i]);
+                }
+            }
+        }else if(client.indexOf("Web")==0){
             webDriver = (WebDriver) clientMap.get(client);
             if ( url.length() > 2 ) {
                 if (url.indexOf("http")!=0) url = webHost + url;
                 webDriver.get(url);
-                Thread.sleep(2000);
+                webDriver.navigate().refresh();
+                Thread.sleep(3000);
                 Common.logPrinter("runTest========>Open: " + url );
             }
-        }else if(client.contains("Android")){
+        }else if(client.indexOf("Android")==0){
             androidDriver = (AndroidDriver) clientMap.get(client);
             if (url.length() > 2) {
                 //url = (String) xpathMap.get(url);
@@ -173,7 +282,7 @@ public class BasicTest {//声明驱动对象
                 Thread.sleep(2000);
                 Common.logPrinter("runTest========>Open: " + url );
             }
-        }else if(client.contains("iOS")){
+        }else if(client.indexOf("iOS")==0){
             iOSDriver = (IOSDriver) clientMap.get(client);
             if (url.length() > 2) {
                 iOSDriver.terminateApp(url);
@@ -184,21 +293,33 @@ public class BasicTest {//声明驱动对象
         }
 
         //执行非API测试的操作
-        if(!"API".equals(client)) {
-            String[] opts = operates.split(";");
-            for (int i = 0; i < opts.length; i++) {
+        if (client.indexOf("Web")==0 || client.indexOf("Android")==0 || client.indexOf("iOS")==0 || client.indexOf("CMD")==0) {
+            if (operates.indexOf("[{")==0) {
                 try {
-                    if (opts[i].trim().length() > 0 && opts[i].trim().indexOf("{") == 0) {
-                        opts[i] = paramReplace(opts[i]);
-                        Common.logPrinter("runTest========>operate: " + opts[i]);
-                        operation(opts[i].trim(), client);
-                        if (tcID.indexOf("#") == 1)
-                            screenShotAsFile(sheet + "-" + this.tcID + "-" + i, client);
-                    }
+                    JSONArray opts = new JSONArray(operates);
+                    for (int i=0; i<opts.length();i++)
+                        explainSIDE(opts.get(i).toString(),client);
                 } catch (Exception e) {
-                    screenShotAsFile(sheet + "-" + this.tcID + "-Fail-" + i, client);
-                    Common.logPrinter("runTest========>Exception: " + e.toString());
-                    e.printStackTrace();
+                    System.out.println("runTest========>JsonString非法: " + operates);
+                }
+            } else {
+                String[] opts = operates.split(";");
+                for (int i = 0; i < opts.length; i++) {
+                    try {
+                        if (opts[i].trim().length() > 0 && opts[i].trim().indexOf("{") == 0) {
+                            opts[i] = paramReplace(opts[i]);
+                            Common.logPrinter("runTest========>operate: " + opts[i]);
+                            operation(opts[i].trim(), client);
+                            if (tcID.indexOf("#") == 1)
+                                screenShotAsFile(sheet + "-" + this.tcID + "-" + i, client);
+                        }else if (opts[i].trim().length() > 0){
+                            Common.logPrinter("runTest========>跳过测试步骤: " + opts[i]);
+                        }
+                    } catch (Exception e) {
+                        screenShotAsFile(sheet + "-" + this.tcID + "-Fail-" + i, client);
+                        Common.logPrinter("runTest========>Exception: " + e.toString());
+                        e.printStackTrace();
+                    }
                 }
             }
             screenShotAsFile(sheet + "-" + this.tcID, client);
@@ -210,6 +331,8 @@ public class BasicTest {//声明驱动对象
                     params[i] = paramReplace(params[i]);
                     Common.logPrinter("runTest========>param: " + params[i]);
                     parametric(params[i].trim(),client);
+                }else if (params[i].trim().length() > 0){
+                    Common.logPrinter("runTest========>跳过参数化操作: " + params[i]);
                 }
             }
 
@@ -220,6 +343,8 @@ public class BasicTest {//声明驱动对象
                     ass[i] = paramReplace(ass[i]);
                     Common.logPrinter("runTest========>assert: " + ass[i]);
                     assertResult(ass[i].trim(),client);
+                }else if (ass[i].trim().length() > 0){
+                    Common.logPrinter("runTest========>跳过断言: " + ass[i]);
                 }
             }
         }
@@ -231,20 +356,82 @@ public class BasicTest {//声明驱动对象
         while (iterator.hasNext()) {
             Map.Entry<Object, Object> entry = iterator.next();
             String key = (String)entry.getKey();
-            WebDriver driver = (WebDriver) entry.getValue();
-            driver.quit();
+            if(key!=null && key.indexOf("Web")==0) {
+                WebDriver driver = (WebDriver) entry.getValue();
+                driver.close();
+            }
+            if(key!=null && key.indexOf("Android")==0) {
+                AndroidDriver driver = (AndroidDriver) entry.getValue();
+                driver.quit();
+            }
+            if(key!=null && key.indexOf("iOS")==0) {
+                IOSDriver driver = (IOSDriver) entry.getValue();
+                driver.quit();
+            }
+            if(key!=null && key.indexOf("DB")==0) {
+                Connection connection = (Connection) entry.getValue();
+                try {
+                    connection.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
             //if(key!=null && key.contains("Web")) driver.close(); else driver.quit();
         }
         clientMap.clear();
+        if(down.length()>0) {
+            File file = new File(down);
+            file.delete();
+        }
     }
 
+    public void explainSIDE(String opt,String client) throws Exception {
+        JSONObject json = new JSONObject();
+        json.put("Index","0");
+        Common.logPrinter("explainSIDE========>src opt: " + opt);
+
+        String command = Json.getJsonValue(opt,"command");
+        if("click".equals(command)) {json.put("Type","Click");json.put("Local",changeTarget(opt));}
+        else if("open".equals(command)) {json.put("Type","Open");json.put("Local",changeTarget(opt));}
+        else if("type".equals(command)) {json.put("Type","Set");json.put("Local",changeTarget(opt));json.put("Value",Json.getJsonValue(opt,"value"));}
+        else if("select".equals(command)) {json.put("Type","Select");json.put("Local",changeTarget(opt));json.put("Value",Json.getJsonValue(opt,"value"));}
+        else if("mouseOver".equals(command)) {json.put("Type","Move");json.put("Local",changeTarget(opt));}
+        else {Common.logPrinter("explainSIDE========>无法解析此操作，请联系开发人员。");}
+
+        Common.logPrinter("explainSIDE========>dest opt: " + json.toString());
+        try {
+            operation(json.toString(), client);
+        }catch (Exception e){
+            Common.logPrinter("explainSIDE========>操作失败: " + json.toString());
+        }
+    }
+    public String changeTarget(String opt){
+        String target = Json.getJsonValue(opt,"target").trim();
+        Common.logPrinter("changeTarget========>src target: " + target);
+
+        if(target.indexOf("id=")==0) target = target.replace("id=","ID:");
+        if(target.indexOf("class=")==0) target = target.replace("class=","Class:");
+        if(target.indexOf("xpath=")==0) target = target.replace("xpath=","XPath:");
+        if(target.indexOf("css=")==0) target = target.replace("css=","CSS:");
+        if(target.indexOf("name=")==0) target = target.replace("name=","Name:");
+        if(target.indexOf("tag=")==0) target = target.replace("tag=","Tag:");
+
+        Common.logPrinter("changeTarget========>dest target: " + target);
+        return target;
+    }
     public void operation(String opt,String client) throws Exception {
         String type = Json.getJsonValue(opt,"Type");
         if("Click".equals(type)) getElement(opt,client).click();
         if("ClickXY".equals(type)) clickXY(opt,client);
         if("ClickPre".equals(type)) clickPre(opt,client);
         if("ClickIF".equals(type) && getElement(opt,client)!=null) getElement(opt,client).click();
-        if("ClickText".equals(type)) getTextWebElement(opt,client).get(Integer.parseInt(Json.getJsonValue(opt,"Index"))).click();
+        if("ClickText".equals(type)) {
+            List<WebElement> wes = getTextWebElement(opt,client);
+            if("Last".equals(Json.getJsonValue(opt,"Index")))
+                wes.get(wes.size()-1).click();
+            else
+                wes.get(Integer.parseInt(Json.getJsonValue(opt,"Index"))).click();
+        }
         if("Set".equals(type)) {
             WebElement webElement = getElement(opt,client);
             webElement.clear();
@@ -266,14 +453,32 @@ public class BasicTest {//声明驱动对象
         if("Open".equals(type)) open(opt,client);
         if("Window".equals(type)) window(opt,client);
         if("Frame".equals(type)) frame(opt,client);
+        if("Select".equals(type)) select(opt,client);
+        if("CMD".equals(type)) runCMD(opt);
 
         String sleep = Json.getJsonValue(opt, "Sleep");
         if (sleep != null && sleep != "") {
-            Thread.sleep(Integer.parseInt(sleep) * 1000);
             Common.logPrinter("operation========>Sleep: " + sleep);
+            Thread.sleep(Integer.parseInt(sleep) * 1000);
         }else {
             Thread.sleep(1000);
         }
+    }
+    public void runCMD(String json){
+        String cmd = Json.getJsonValue(json,"CMD").trim();
+        Common.logPrinter("runCMD========>CMD: " + cmd);
+        if(cmd.indexOf("adb ")==0)
+            result = Common.executeCMD(cmd);
+        else
+            Common.logPrinter("runCMD========>只允许执行adb命令！");
+        //Assert.assertEquals(result.indexOf("ExitCode: 0"),0);
+    }
+    public void select(String json,String client){
+        Select se = new Select(getElement(json,client));
+        String value = Json.getJsonValue(json,"Value");
+        Common.logPrinter("select========>Text: " + value);
+        se.selectByVisibleText(value);
+        //se.selectByValue(value);
     }
     public void frame(String json,String client){
         WebDriver wd = (WebDriver)clientMap.get(client);
@@ -282,7 +487,7 @@ public class BasicTest {//声明驱动对象
         Common.logPrinter("frame========>ID or Name: " + value);
         wd.switchTo().frame(value);
     }
-    public void window(String json,String client){
+    public void window(String json,String client) throws InterruptedException {
         WebDriver wd = (WebDriver)clientMap.get(client);
         Set<String> allWindowsId = wd.getWindowHandles();
         String value = Json.getJsonValue(json,"Value");
@@ -291,18 +496,21 @@ public class BasicTest {//声明驱动对象
         // 获取所有的打开窗口的句柄
         int i = 0;
         for (String windowId : allWindowsId) {
-            Common.logPrinter("window========>Title " + i + " : " + wd.switchTo().window(windowId).getTitle());
+            wd.switchTo().window(windowId);
+            if(wd.getTitle().equals("帮助我们为你改进搜索")) continue;
+            Common.logPrinter("window========>Window Title " + i + " : " + wd.getTitle());
             if(Json.getJsonValue(json,"Index")!=null && i==Integer.parseInt(Json.getJsonValue(json,"Index"))){
-                Common.logPrinter("window========>Select Title: " + wd.switchTo().window(windowId).getTitle());
-                wd.switchTo().window(windowId);
+                Common.logPrinter("window========>Select Window" + i + " : " + wd.getTitle());
+                //wd.switchTo().window(windowId);
                 break;
             }
-            if (wd.switchTo().window(windowId).getTitle().contains(value)) {
-                Common.logPrinter("window========>Select Title: " + wd.switchTo().window(windowId).getTitle());
-                wd.switchTo().window(windowId);
+            if (wd.getTitle().equals(value)) {
+                Common.logPrinter("window========>Select Window" + i + " : " + wd.getTitle());
+                //wd.switchTo().window(windowId);
                 break;
             }
             i += 1;
+            Thread.sleep(1000);
         }
     }
     //Web、安卓、iOS
@@ -323,7 +531,9 @@ public class BasicTest {//声明驱动对象
     //Web、安卓、iOS
     public void open(String opt,String client) throws InterruptedException {
         String local = Json.getJsonValue(opt, "Local");
-        local = (String)xpathMap.get(local);
+        if (local.indexOf("/")==0) local = webHost + local;
+        else if (local.indexOf("http")==0) local = local;
+        else local = (String)xpathMap.get(local);
         Common.logPrinter("open========>Local: " + local);
         if(client.contains("Web")){
             ((WebDriver)clientMap.get(client)).get(local);
@@ -396,23 +606,35 @@ public class BasicTest {//声明驱动对象
             Thread.sleep(1000);
         }
     }
-    public void assertResult(String ass,String client){
+    public void assertResult(String ass,String client) throws InterruptedException {
         String type = Json.getJsonValue(ass,"AssertType");
         String local = Json.getJsonValue(ass,"Local");
         String value = Json.getJsonValue(ass,"Value");
         String mold = Json.getJsonValue(ass,"Mold");
-        if ("EMCount".equals(type)) {
+        if ("ADB".equals(type)) {
+            String cnt = Json.getJsonValue(ass,"Count");
+            Common.executeCMD("adb shell uiautomator dump");
+            Thread.sleep(5000);
+            String str = Common.executeCMD("adb shell cat /sdcard/window_dump.xml");
+            Thread.sleep(5000);
+            int count = str.split(value).length-1;
+            if ("Equal".equals(mold)) Assert.assertTrue(count == Integer.parseInt(cnt));
+            else if ("Exclude".equals(mold)) Assert.assertTrue(count < Integer.parseInt(cnt));
+            else Assert.assertTrue(count >= Integer.parseInt(cnt));
+        } else if ("EMCount".equals(type)) {
+            String cnt = Json.getJsonValue(ass,"Count");
             int count = getElements(local,client).size();
-            if ("Equal".equals(mold)) Assert.assertTrue(count == Integer.parseInt(value));
-            else if ("Exclude".equals(mold)) Assert.assertTrue(count < Integer.parseInt(value));
-            else Assert.assertTrue(count >= Integer.parseInt(value));
+            if ("Equal".equals(mold)) Assert.assertTrue(count == Integer.parseInt(cnt));
+            else if ("Exclude".equals(mold)) Assert.assertTrue(count < Integer.parseInt(cnt));
+            else Assert.assertTrue(count >= Integer.parseInt(cnt));
         } else if ("Toast".equals(type)) {
             toast(value,client);
         } else if ("Text".equals(type)) {
+            String cnt = Json.getJsonValue(ass,"Count");
             int count = getTextWebElement(ass,client).size();
-            if ("Equal".equals(mold)) Assert.assertTrue(count == Integer.parseInt(value));
-            else if ("Exclude".equals(mold)) Assert.assertTrue(count > Integer.parseInt(value));
-            else Assert.assertTrue(count >= Integer.parseInt(value));
+            if ("Equal".equals(mold)) Assert.assertTrue(count == Integer.parseInt(cnt));
+            else if ("Exclude".equals(mold)) Assert.assertTrue(count > Integer.parseInt(cnt));
+            else Assert.assertTrue(count >= Integer.parseInt(cnt));
         } else if ("File".equals(type)) {
             File file = new File(value);
             if(file.exists()) Common.logPrinter("assertResult========>File Exists: " + value);
@@ -422,12 +644,16 @@ public class BasicTest {//声明驱动对象
             else Assert.assertTrue(file.exists());
             String delete = Json.getJsonValue(ass,"Delete");
             if ("Yes".equals(delete)) file.delete();
+        } else if ("Alert".equals(type)) {
+            String str = ((WebDriver) clientMap.get(client)).switchTo().alert().getText();
+            Common.logPrinter("assertResult========>getText: " + str);
+
+            if ("Equal".equals(mold)) Assert.assertEquals(str, value);
+            else if ("Exclude".equals(mold)) Assert.assertTrue(!str.contains(value));
+            else Assert.assertTrue(str.contains(value));
         } else {
-            String str = "";
-            if ("Alert".equals(type))
-                str = ((WebDriver) clientMap.get(client)).switchTo().alert().getText();
-            else
-                str = getElement(ass,client).getText();
+            String str = this.result;
+            if (local != null && local != "") str = getElement(ass, client).getText();
             Common.logPrinter("assertResult========>getText: " + str);
 
             if ("Equal".equals(mold)) Assert.assertEquals(str, value);
@@ -438,7 +664,10 @@ public class BasicTest {//声明驱动对象
     public void toast(String toast,String client){
         try {
             final WebDriverWait wait = new WebDriverWait(((WebDriver) clientMap.get(client)),2);
-            Assert.assertNotNull(wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[contains(@text,'"+ toast + "')]"))));
+            if(client.contains("Web"))
+                Assert.assertNotNull(wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[contains(text(),'"+ toast + "')]"))));
+            else
+                Assert.assertNotNull(wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[contains(@text,'"+ toast + "')]"))));
             Common.logPrinter("assertResult========>toast=<" + toast + "> 捕获成功！");
         }catch (Exception e){
             Common.logPrinter("assertResult========>toast=<" + toast + "> 捕获失败！");
@@ -449,6 +678,8 @@ public class BasicTest {//声明驱动对象
         List<WebElement> wes = null;
 
         String value = (String)xpathMap.get(emId);
+        if(value == null || "".equals(value.trim())) value = emId;
+
         value = paramReplace(value);
         Common.logPrinter("getElement========>FindValue: " + value);
         String find = value.substring(0,value.indexOf(":")).trim();
@@ -462,6 +693,7 @@ public class BasicTest {//声明驱动对象
         if ("Name".equals(find)) wes = ((WebDriver) clientMap.get(client)).findElements(By.name(local));
         if ("Class".equals(find)) wes = ((WebDriver) clientMap.get(client)).findElements(By.className(local));
         if ("Tag".equals(find)) wes = ((WebDriver) clientMap.get(client)).findElements(By.tagName(local));
+        if ("CSS".equals(find)) wes = ((WebDriver) clientMap.get(client)).findElements(By.cssSelector(local));
         Common.logPrinter("getElement========>Find Element Size: " + wes.size());
         return wes;
     }
@@ -487,8 +719,13 @@ public class BasicTest {//声明驱动对象
         String start = Json.getJsonValue(param,"Start");
         String end = Json.getJsonValue(param,"End");
 
-        String str = "";
-        if ("Alert".equals(local)) str = ((WebDriver) clientMap.get(client)).switchTo().alert().getText(); else str = getElement(local,client).getText();
+        String str = this.result;
+        if (local != null && local != "") {
+            if ("Alert".equals(local))
+                str = ((WebDriver) clientMap.get(client)).switchTo().alert().getText();
+            else
+                str = getElement(param, client).getText();
+        }
         Common.logPrinter("parametric========>getText: " + str);
 
         int b=0, e=str.length();
@@ -525,6 +762,7 @@ public class BasicTest {//声明驱动对象
     }
 
     public void screenShotAsFile(String fileName,String client) {
+        if (client.indexOf("CMD")==0) return;
         File scrFile = ((TakesScreenshot) clientMap.get(client)).getScreenshotAs(OutputType.FILE);
         try {
             File destFile = new File("./screen/" + fileName + ".jpg");

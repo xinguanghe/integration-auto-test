@@ -23,6 +23,7 @@ public class DataRead {
         return objs;
     }
     public static HashMap getXPath(String excelPath){
+        System.setProperty("file.encoding", "UTF-8");
         HashMap xpath = new HashMap();
         try {
             // 创建对Excel工作簿文件的引用
@@ -31,8 +32,10 @@ public class DataRead {
             // 本例是按名引用（让我们假定那张表有着缺省名"Sheet1"）
             HSSFSheet sheet = workbook.getSheet("EMDC");
             for(int i=2;i<=sheet.getLastRowNum();i++){
-                String id = sheet.getRow(i).getCell(3).getStringCellValue().trim();
-                String value = sheet.getRow(i).getCell(4).getStringCellValue().trim();
+                String id = "";
+                if(sheet.getRow(i).getCell(3) != null) id = sheet.getRow(i).getCell(3).getStringCellValue().trim();
+                String value = "";
+                if(sheet.getRow(i).getCell(4) != null) value = sheet.getRow(i).getCell(4).getStringCellValue().trim();
                 System.out.println("getXPath========> : " + id + "=" + value);
                 xpath.put(id,value);
             }
@@ -43,6 +46,7 @@ public class DataRead {
     }
     public static List<String[]> getExcel(String excelPath,String sheetName,String runType){
         List<String[]> datas = new ArrayList<String[]>();
+        System.setProperty("file.encoding", "UTF-8");
         int auto, tcId, url, client, operates, asserts, parametric, module, title;
         try {
             // 创建对Excel工作簿文件的引用

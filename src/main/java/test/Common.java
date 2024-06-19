@@ -1,37 +1,61 @@
 package test;
 
 import io.appium.java_client.ios.IOSDriver;
-import io.appium.java_client.TouchAction;
 import io.appium.java_client.android.AndroidDriver;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.TrustStrategy;
-import org.codehaus.jettison.json.JSONArray;
-import org.openqa.selenium.Dimension;
-import org.openqa.selenium.OutputType;
-import org.openqa.selenium.TakesScreenshot;
+
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.remote.tracing.opentelemetry.SeleniumSpanExporter;
 import org.testng.Reporter;
-import org.testng.reporters.Files;
 
 import javax.net.ssl.SSLContext;
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
 public class Common {
+    public static void setDBConnection(String json){
+        Connection connection = null;
+        logPrinter("setWebDriver=========>json: " + json);
+
+        String driver = Json.getJsonValue(json,"driver");
+        String clientName = Json.getJsonValue(json,"clientName");
+        String url = Json.getJsonValue(json,"url");
+        String user = Json.getJsonValue(json,"user").trim();
+        String pass = Json.getJsonValue(json,"pass").trim();
+        try {
+            if(driver!=null && driver!="") Class.forName(driver);
+            connection = DriverManager.getConnection(url,user,pass);
+            //Statement statement = connection.createStatement();
+        }catch (Exception e){
+            logPrinter("getDatabaseConnect=========>Error: " + url + " - " + user + " - " + pass);
+            e.printStackTrace();
+        }
+        BasicTest.clientMap.put(clientName,connection);
+    }
     public static CloseableHttpClient buildSSLCloseableHttpClient() throws Exception {
         SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(null, new TrustStrategy() {
             // 信任所有
@@ -50,17 +74,24 @@ public class Common {
         String clientName = Json.getJsonValue(json,"clientName");
         String driverName = Json.getJsonValue(json,"driverName").trim();
         String driverSRC = Json.getJsonValue(json,"driverSRC").trim();
+
         // 设置指定键对值的系统属性
         System.setProperty(driverName, driverSRC);
-        if(driverName.indexOf("edge")>0)
-            driver = new EdgeDriver();
-        else if(driverName.indexOf("firefox")>0)
-            driver = new FirefoxDriver();
-        else if(driverName.indexOf("chrome")>0)
-            driver = new ChromeDriver();
-        else
-            System.out.println("getWebDriver =======> WebClient: "+clientName+" 配置不正确。（\"driverName\"格式：webdriver.edge.driver）");
-
+        if(driverName.indexOf("edge")>0) {
+            EdgeOptions options = new EdgeOptions();
+            options.addArguments("--remote-allow-origins=*");
+            driver = new EdgeDriver(options);
+        }else if(driverName.indexOf("firefox")>0) {
+            FirefoxOptions options = new FirefoxOptions();
+            options.addArguments("--remote-allow-origins=*");
+            driver = new FirefoxDriver(options);
+        }else if(driverName.indexOf("chrome")>0) {
+            ChromeOptions options = new ChromeOptions();
+            options.addArguments("--remote-allow-origins=*");
+            driver = new ChromeDriver(options);
+        }else {
+            System.out.println("getWebDriver =======> WebClient: " + clientName + " 配置不正确。（\"driverName\"格式：webdriver.edge.driver）");
+        }
         // 浏览器最大化
         driver.manage().window().maximize();
         //driver.manage().window().setSize(new Dimension(1280,1024));
@@ -129,6 +160,35 @@ public class Common {
         driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS);
 
         BasicTest.clientMap.put(clientName,driver);
+    }
+
+    public static String executeCMD(String cmd) {
+        Process process;
+        ProcessBuilder builder;
+        StringBuilder output = new StringBuilder();
+        String osName = System.getProperty("os.name").toUpperCase(Locale.ENGLISH);
+        logPrinter("executeCMD=========>osName: " + osName);
+        try {
+            if (osName.contains("WINDOWS")){
+                builder = new ProcessBuilder("cmd.exe", "/c", cmd); // /c参数表示执行后关闭CMD窗口
+                process = builder.start();
+            }else {
+                //builder = new ProcessBuilder("/bin/bash", "/c",cmd); // /c参数表示执行后关闭CMD窗口
+                process = Runtime.getRuntime().exec(cmd);
+            }
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            int exitCode = process.waitFor(); // 等待进程结束并获取退出状态码
+            output.append("ExitCode: ").append(exitCode).append("\n");
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+            logPrinter("executeCMD=========>CMD Result: \n" + cmd + "\n" + output.toString());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return output.toString();
     }
 
     public static void logPrinter(String str) {

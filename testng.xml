@@ -3,10 +3,10 @@
 <suite name="All Test Suite" verbose="10" parallel="tests" thread-count="1">
     <!-- 测试目标API服务器Host -->
     <parameter name="APIHost" value="http://wyscrm-uat.sunac.com.cn" />
+    <parameter name="WebHost" value="http://wyscrm-uat.sunac.com.cn" />
 
     <!-- Web 测试 Client 配置 -->
-    <!--parameter name="WebClient" value="./clients/WebClients.properties" /-->
-    <parameter name="WebClient" value="" />
+    <parameter name="WebClient" value="./clients/WebClients.properties" />
 
     <!-- Android 测试 Client 配置 -->
     <parameter name="AndroidClient" value="./clients/AndroidClients.properties" />
@@ -15,10 +15,16 @@
 <!--    <parameter name="iOSClient" value="./clients/iOSClients.properties" />-->
     <parameter name="iOSClient" value="" />
 
+    <!-- 数据库 测试 Client 配置 -->
+    <parameter name="DatabaseClient" value="./clients/DatabaseClients.properties" />
+
     <!-- 测试用例Excel文件在本地的位置和文件名 -->
 <!--    <parameter name="Excel" value="./Integration-Auto-TestCase.xls" />-->
     <!-- 测试用例Excel文件支持WPS云文档URL（文档权限设置为任何人可查看） -->
-    <parameter name="Excel" value="https://kdocs.cn/l/cfkRwRHRrT64" />
+    <parameter name="Excel" value="https://sunac.feishu.cn/file/G44qbE5jBoxUvux82yncc7JWnvg?from=from_copylink" />
+    <parameter name="Pass" value="8@[cZ$09" />
+    <parameter name="Down" value="C:/Users/Xin GuangHe/Downloads/Integration-Auto-TestCase.xls" />
+
     <!-- jenkins服务的 WorkSpace 目录路径,可以不填写 -->
     <parameter name="JenkinsWS" value="http://172.17.32.117:8080/job/android-auto-test/ws" />
 <!--    <parameter name="JenkinsWS" value="" />-->

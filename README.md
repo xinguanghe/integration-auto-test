@@ -66,7 +66,7 @@ Excel测试用例编写规则和方法：(支持本地Excel和金山云Excel)
 
 * TestCaseID：	代表测试用例的代号，不能重复。	
 
-* Client：	填写执行测试用例的客户端（例如：API、Web、iOS、Android），这些客户端是 WebClients.properties、iOSClients.properties、AndroidClients.properties 等配置文件里配置。								
+* Client：	填写执行测试用例的客户端（例如：API、Web、iOS、Android、DB），这些客户端是 WebClients.properties、iOSClients.properties、AndroidClients.properties 等配置文件里配置。								
 
 * URL | Activity：	测试用例起始的页面，就是测试用例开始执行后在客户端上打开的第一个页面。必须在EMDC里注册，并且要填写EMDC的ID。
     * API	    POST:/api/auth/app/member/login (必填，可以是http开头的全路径）								
@@ -82,11 +82,12 @@ Excel测试用例编写规则和方法：(支持本地Excel和金山云Excel)
     * 5 - 不重要的其他测试用例
     * \# - 调试中的测试用例								
 
+* 所有操作步骤、参数化操作、断言 必须以 { 开头，以 }; 结束，不然跳过该操作或认为书写错误。
 * 操作 Operates： "Click"-单击（元素）, "ClickXY"-单击（像素）, "Set"-赋值, "Clear"-清除, "Submit"-表单提交, "Alert"-弹出框, "Move"-鼠标移动, "Sleep"-等待, "Assert"-断言, "Parametric"-参数化,  "Shot"-屏幕截图, "Swipe"-"划动"。每个操作都可以加“Sleep”属性，代表该操作完成后硬性等待设置的时间（秒）。
     * （Web、Android、iOS）	赋值：{"Type":"Set","Local":"EMDC ID","Value":"xinguanghe","Index":"0"};								
     * （Web、Android、iOS）	清除：{"Type":"Clear","Local":"EMDC ID","Index":"0"}; //清除元素里的输入内容								
     * （Web、Android、iOS）	单击（元素）：{"Type":"Click","Local":"EMDC ID","Index":"1"};								
-    * （Android、iOS）	单击（存在）：{"Type":"ClickIF","Local":"EMDC ID","Index":"1"};								
+    * （Web、Android、iOS）	单击（存在）：{"Type":"ClickIF","Local":"EMDC ID","Index":"1"};								
     * （Android、iOS）	单击（像素）：{"Type":"ClickXY","BaseX":"Top","BaseY":"Mid","Wide":"100","High":"100","Count":"1"};								
     * （Android、iOS）	单击（比例）：{"Type":"ClickPre","WidePre":"100","HighPre":"100","Count":"1"};								
     * （Web、Android、iOS）	单击（文本）：{"Type":"ClickText","Text":"新建","Index":"1"};//Top：屏幕左上角基准，Mid：屏幕中间点基准，"Count"是单击次数								
@@ -98,9 +99,13 @@ Excel测试用例编写规则和方法：(支持本地Excel和金山云Excel)
     * （Web、Android、iOS）	断言：{"Type":"Assert","AssertType":"ID","Local":"EMDC ID","Value":"xintest","Mold":"Equal"};								
     * （Web、Android、iOS）	参数化：{"Type":"Parametric","Name":"param1","ParamType":"ID","Local":"EMDC ID","Start":"xintest","End":"Equal"};								
     * （Web、Android、iOS）	屏幕截图：{"Type":"Shot","Name":"test"}; //屏幕上有弹出框时无法截图								
-    * （Web）	鼠标滚动：{"Type":"Scroll","Local":"EMDC ID","Index":"2","Value":"1000"};								
+    * （Web）	执行js：{"Type":"JS","JSCode":"document.getElementById(\"kw\").value=\"yeetrack\""};								
+    * （Web）	鼠标滚动：{"Type":"Scroll","Local":"EMDC ID","Index":"2","Value":"1000"};
+    * （Web）	下拉选择框：{"Type":"Select","Local":"EMDC ID","Index":"2","Value":"游泳"};	//"Value"是下拉选择框选项的text值							
     * （Android、iOS）	"划动：{"Type":"Swipe","SWide":"100","SHigh":"100","EWide":"100","EHigh":"100","Count":"1"};//SWide、SHigh：划动开始点，EWide、EHigh：划动结束点，"Count"是划动次数。
-    * （Web）	拖动：{"Type":"Drag","FindType":"XPath","Local":"EMDC ID","Wide":"1","High":"1","Index":"1"};								
+    * （Web）	拖动：{"Type":"Drag","Local":"EMDC ID","Wide":"1","High":"1","Index":"1"};								
+    * （Web）	选择窗口：{"Type":"Window","Value":"新收费","Index":"1"};//Value：窗口标题所包含的关键词，Index：窗口序号（从0开始）					
+    * （Web）	选择Frame：{"Type":"Frame","Value":"新收费"};//Value：Frame的 id 或 name 属性
     * （API）	"支持5种接口参数传递方式："Json"-Json字符串, "K&V"-Key Value 对, "File"-文件, "Form"-表单, "Down"-文件下载, "URL"-URL传参 等6种。"File" 和 "Form" 类型时 不需要再Header里设定 "Content-Type":"multipart/form-data" 。所有类型里只要设置 "Save" 属性，就会把接口返回内容以 "Save" 值里的路径保存为一个文件。"								
     * （API）	Json：{"Headers":{"token":"1234567890","Content-Type":"application/json"},"Inputs":{"Type":"Json","Data":{"Name":"el-input__user","Value":"xinguanghe","Index":"0"}}}								
     * （API）	K&V：{"Headers":{"token":"1234567890","Content-Type":"application/json"},"Inputs":{"Type":"K&V","Data":{"ID":"12345678","Index":"1"}}}								
@@ -108,20 +113,27 @@ Excel测试用例编写规则和方法：(支持本地Excel和金山云Excel)
     * （API）	Form：{"Headers":{"token":"1234567890","Content-Type":"application/json"},"Inputs":{"Type":"Form","Data":{"ID":"12345678","Index":"1"},"File":{"banner1":"<$SRC$>/banner1.jpg;<$SRC$>/banner2.jpg;","banner2":"<$SRC$>/banner2.jpg"}}}								
     * （API）	Down：{"Headers":{"token":"1234567890","Content-Type":"application/json"},"Inputs":{"Type":"Down","Save":"<$SRC$>\\files\\function.gif"}}								
     * （API)	URL：{"Headers":{"token":"1234567890","Content-Type":"application/json"},"Inputs":{"Type":"URL","Data":"?id=user1&name=name1"}}								
+    * （DB)  	Select: select * from abcd where name = 'test';								
+    * （DB)  	Insert: insert into abcd (name,ID) values ('test','1234');								
+    * （DB)  	Update: update abcd set name = '' where name = 'test';								
+    * （DB)  	Delete: delete from abcd where name = 'test';								
+    * （Web、Android)  	CMD: {"Type":"CMD","CMD":"adb shell am start -S -W com.ss.android.lark","Sleep":"5"};
 
 * 断言 Asserts：断言类型（"AssertType"）：不填写时默认为"String"类。支持3种断言模式："Equal"-相等, "Include"-包含, "Exclude"-不包含，默认为包含模式。
     * （Web、Android、iOS）	{"AssertType":"String","Local":"EMDC ID","Value":"登录成功","Mold":"Include","Index":"0"};								
-    * （Web）               {"AssertType":"Alert","Value":"登录成功","Mold":"Include"};								
-    * （Web、Android、iOS）	{"AssertType":"EMCount","Local":"EMDC ID","Value":"5","Mold":"Equal"}; //Equal：count=5；Include：count>=5；Exclude：count<5；								
+    * （Web）               {"AssertType":"Alert","Value":"登录成功","Mold":"Include"};						
+    * （Web）               {"AssertType":"File","Value":"登录成功","Mold":"Include","Delete":"Yes"};//Value:文件路径，Mold: Include-存在、Exclude-不存在，Delete：Yes-删除、No-不删除	
+    * （Web、Android、iOS）	{"AssertType":"EMCount","Local":"EMDC ID","Count":"5","Mold":"Equal"}; //Equal：count=5；Include：count>=5；Exclude：count<5；								
     * （Web、Android、iOS）	{"AssertType":"Toast","Value":"创建成功！"};								
-    * （Web、Android、iOS）	{"AssertType":"Text","Text":"新建","Value":"5","Mold":"Equal"}; //Equal：count=5；Include：count>=5；Exclude：count<5；								
-    * （API）	            {"Mold":"Exclude","Start":"","End":"Exclude","Value":"ID"};								
-    * （API）	            {"Mold":"Sleep","Value":"3000"};								
+    * （Web、Android、iOS）	{"AssertType":"Text","Value":"新建","Count":"5","Mold":"Equal"}; //Equal：count=5；Include：count>=5；Exclude：count<5；								
+    * （API、DB）	        {"Mold":"Exclude","Start":"","End":"Exclude","Value":"ID"};								
+    * （API、DB）	        {"Mold":"Sleep","Value":"3000"};								
+    * （Web、Android）	    {"AssertType":"ADB","Value":"微信","Count":"5","Mold":"Equal"}; //Equal：count=5；Include：count>=5；Exclude：count<5；								
 
 * 参数化 Parametric："Start"为参数化取值开始位置，值为"时从头开始取值，值为"ID"时第一次出现"ID"之后的位置开始取值。"End"为参数化取值结束位置，值为"时取值到最后，值为"ID"时取值开始位置起第一次出现"ID"之前的位置取值结束。
     * （Web、Android、iOS）	{"Name":"param1","Local":"EMDCID","Start":"ID","End":"Equal","Index":"0"};								
-    * （Web、Android、iOS）	{"Name":"param2","Local":"EMDCID","Start":","End":","Index":"1"};								
-    * （API）	{"Name":"param1","Start":"ID","End":"Equal"};								
+    * （Web、Android、iOS）	{"Name":"param2","Local":"EMDCID","Start":"","End":"","Index":"1"};								
+    * （API、DB）	{"Name":"param1","Start":"ID","End":"Equal"};								
 
 
 待完善事项：

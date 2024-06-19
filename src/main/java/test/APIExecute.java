@@ -31,9 +31,11 @@ public class APIExecute {
         String uri = url.substring(url.indexOf(":")+1).trim();
         if ("URL".equals(type)) uri = uri + data;
         if(uri.indexOf("http")!=0){
-            URL tmURL = new URL(BasicTest.apiHost + uri);
-            URI tmURI = new URI(tmURL.getProtocol(), tmURL.getHost(), tmURL.getPath(), tmURL.getQuery(), null);
-            hrq = new HttpRequest(tmURI);
+//            URL tmURL = new URL(BasicTest.apiHost + uri);
+//            URI tmURI = new URI(tmURL.getProtocol(), tmURL.getHost(), tmURL.getPath(), tmURL.getQuery(), null);
+//            hrq = new HttpRequest(tmURI);
+            hrq = new HttpRequest(new URI(BasicTest.apiHost + uri));
+
         }else{
             hrq = new HttpRequest(new URI(uri));
         }
