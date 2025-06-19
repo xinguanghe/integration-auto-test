@@ -27,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.time.LocalDate;
 import java.util.*;
+import java.time.Duration;
 
 //@Listeners({TestResultListener.class})
 public class BasicTest {//声明驱动对象
@@ -663,7 +664,7 @@ public class BasicTest {//声明驱动对象
     }
     public void toast(String toast,String client){
         try {
-            final WebDriverWait wait = new WebDriverWait(((WebDriver) clientMap.get(client)),2);
+            final WebDriverWait wait = new WebDriverWait(((WebDriver) clientMap.get(client)),Duration.ofSeconds(2));
             if(client.contains("Web"))
                 Assert.assertNotNull(wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[contains(text(),'"+ toast + "')]"))));
             else
