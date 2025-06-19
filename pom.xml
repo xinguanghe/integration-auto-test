@@ -82,7 +82,7 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.appium</groupId>
+            <groupId>io.appium</groupId>
             <artifactId>java-client</artifactId>
             <version>v8.0.0</version>
         </dependency>
