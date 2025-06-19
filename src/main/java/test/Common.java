@@ -29,7 +29,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-
+import java.time.Duration;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
