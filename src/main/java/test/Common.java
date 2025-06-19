@@ -97,7 +97,7 @@ public class Common {
         //driver.manage().window().setSize(new Dimension(1280,1024));
 
         //隐式等待调用方式，5秒+时间单位(枚举类型)
-        driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS);
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
 
         BasicTest.clientMap.put(clientName,driver);
     }
@@ -126,7 +126,7 @@ public class Common {
             desiredCapabilities.setCapability("resetKeyboard",Json.getJsonValue(json,"resetKeyboard"));
 
         AndroidDriver driver = new AndroidDriver(new URL(BasicTest.androidRemote),desiredCapabilities);
-        driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS);
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
 
         BasicTest.clientMap.put(clientName,driver);
     }
@@ -157,7 +157,7 @@ public class Common {
             desiredCapabilities.setCapability("resetKeyboard",Json.getJsonValue(json,"resetKeyboard"));
 
         IOSDriver driver = new IOSDriver(new URL(BasicTest.iOSRemote),desiredCapabilities);
-        driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS);
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
 
         BasicTest.clientMap.put(clientName,driver);
     }
